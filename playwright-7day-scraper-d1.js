@@ -65,17 +65,27 @@ class SevenDayRollingScraper {
     if (!dateStr || dateStr === 'Not specified') return null;
     
     // Handle different date formats
-    // Format: "8/14/2025" or "08/14/2025"
+    // Format: "8/14/2024" or "08/14/2024" or "8/14/24"
     const parts = dateStr.trim().split('/');
     if (parts.length === 3) {
       const month = parseInt(parts[0]);
       const day = parseInt(parts[1]);
       const year = parseInt(parts[2]);
       
-      // Handle 2-digit year
+      // Handle 2-digit year (assume 2000s)
       const fullYear = year < 100 ? 2000 + year : year;
       
-      return new Date(fullYear, month - 1, day);
+      // Create date object
+      const date = new Date(fullYear, month - 1, day);
+      
+      // Validate the date is reasonable (not in far future)
+      const currentYear = new Date().getFullYear();
+      if (date.getFullYear() > currentYear + 1) {
+        // If date appears to be in far future, assume current year
+        return new Date(currentYear, month - 1, day);
+      }
+      
+      return date;
     }
     
     // Try standard date parse as fallback
@@ -281,7 +291,9 @@ class SevenDayRollingScraper {
       // Check if job is within our date window
       if (!this.isDateInWindow(job.publish_date)) {
         skippedOldJobs++;
-        console.log(`⏭️  Skipping job ${job.job_control} - Published: ${job.publish_date} (outside 7-day window)`);
+        const parsedDate = this.parseDate(job.publish_date);
+        const dateStr = parsedDate ? parsedDate.toLocaleDateString() : 'Invalid date';
+        console.log(`⏭️  Skipping job ${job.job_control} - Published: ${job.publish_date} → ${dateStr} (outside 7-day window)`);
         continue;
       }
 
@@ -293,11 +305,15 @@ class SevenDayRollingScraper {
             insertedCount++;
             this.totalJobsScraped++;
             this.recordsProcessed++;
-            console.log(`✅ NEW: ${job.job_control} - ${job.link_title} | Published: ${job.publish_date} [${this.recordsProcessed}/${this.maxRecordsToProcess}]`);
+            const parsedDate = this.parseDate(job.publish_date);
+            const dateStr = parsedDate ? parsedDate.toLocaleDateString() : job.publish_date;
+            console.log(`✅ NEW: ${job.job_control} - ${job.link_title} | Published: ${dateStr} [${this.recordsProcessed}/${this.maxRecordsToProcess}]`);
           } else if (result.action === 'updated') {
             updatedCount++;
             this.recordsProcessed++;
-            console.log(`📝 UPDATED: ${job.job_control} - ${job.link_title} [${this.recordsProcessed}/${this.maxRecordsToProcess}]`);
+            const parsedDate = this.parseDate(job.publish_date);
+            const dateStr = parsedDate ? parsedDate.toLocaleDateString() : job.publish_date;
+            console.log(`📝 UPDATED: ${job.job_control} - ${job.link_title} | Published: ${dateStr} [${this.recordsProcessed}/${this.maxRecordsToProcess}]`);
           }
         } else if (result.reason === 'no_changes') {
           noChangeCount++;
