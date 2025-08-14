@@ -1,0 +1,31 @@
+{
+  "name": "calcareers-d1-scraper",
+  "version": "1.0.0",
+  "description": "CalCareers job scraper with Cloudflare D1 storage",
+  "main": "playwright-windowed-scraper-d1.js",
+  "scripts": {
+    "test": "node test-d1-connection.js",
+    "scrape": "node playwright-windowed-scraper-d1.js",
+    "scrape:headless": "GITHUB_ACTIONS=true node playwright-windowed-scraper-d1.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/scraper.git"
+  },
+  "keywords": [
+    "scraper",
+    "calcareers",
+    "cloudflare-d1",
+    "playwright",
+    "github-actions"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "wrangler": "^4.30.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
