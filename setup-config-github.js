@@ -52,7 +52,7 @@ async function setupConfigTable() {
         console.log('📝 Inserting configuration values...');
         
         const configs = [
-            { key: 'account_id', value: '4b63dc7c88e2d5d5f20f08c95e5c0a59', description: 'Cloudflare Account ID' },
+            { key: 'account_id', value: 'aa3156a55993be3bb2b637b7619ddc23', description: 'Cloudflare Account ID' },
             { key: 'database_id', value: 'fcde85de-7c22-46a5-8eaf-f68a7aa0c1b9', description: 'D1 Database ID' },
             { key: 'database_name', value: 'Calhr', description: 'D1 Database Name' },
             { key: 'table_name', value: 'ccJobs', description: 'Jobs Table Name' },
