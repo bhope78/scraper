@@ -6,7 +6,9 @@
   "scripts": {
     "test": "node test-d1-connection.js",
     "scrape": "node playwright-windowed-scraper-d1.js",
-    "scrape:headless": "GITHUB_ACTIONS=true node playwright-windowed-scraper-d1.js"
+    "scrape:headless": "GITHUB_ACTIONS=true node playwright-windowed-scraper-d1.js",
+    "scrape:7day": "node playwright-7day-scraper-d1.js",
+    "scrape:7day:headless": "GITHUB_ACTIONS=true node playwright-7day-scraper-d1.js"
   },
   "repository": {
     "type": "git",
