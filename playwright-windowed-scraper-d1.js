@@ -169,12 +169,10 @@ class WindowedPaginationScraper {
     await this.page.waitForSelector('a[href*="JobPosting.aspx"]', { timeout: 10000 });
 
     const jobs = await this.page.evaluate(() => {
-      // Only get job links from the main results container to avoid duplicates
-      // Look for the main results table/list container
-      const mainContainer = document.querySelector('#cphMainContent_lvResults, #cphMainContent_gvResults, .job-results-container, [id*="Results"]') || document;
-      const jobElements = mainContainer.querySelectorAll('a[href*="JobPosting.aspx"]');
+      // Get all job links on the page
+      const jobElements = document.querySelectorAll('a[href*="JobPosting.aspx"]');
       const extractedJobs = [];
-      const seenJobIds = new Set(); // Track job IDs to prevent duplicates
+      const seenJobIds = new Set(); // Track job IDs to prevent duplicates on this page
 
       jobElements.forEach((linkEl) => {
         const href = linkEl.href;
