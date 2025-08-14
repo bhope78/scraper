@@ -112,6 +112,19 @@ class WindowedPaginationScraper {
       console.log('⚠️ Could not set dropdown to 100, continuing with default');
     }
     
+    // Set sort order to Publish Date (newest first)
+    console.log('📅 Setting sort order to Publish Date (newest first)...');
+    try {
+      const sortDropdownExists = await this.page.locator('#cphMainContent_ddlSortBy').count() > 0;
+      if (sortDropdownExists) {
+        await this.page.selectOption('#cphMainContent_ddlSortBy', 'PublishDate DESC');
+        console.log('✅ Sort order set to newest jobs first');
+        await this.page.waitForTimeout(3000); // Wait for page to reload with sorted results
+      }
+    } catch (e) {
+      console.log('⚠️ Could not set sort order, continuing with default');
+    }
+    
     const totalText = await this.page.textContent('body');
     const totalMatch = totalText.match(/(\d+)\s+job\(s\)\s+found/i);
     if (totalMatch) {
@@ -156,8 +169,12 @@ class WindowedPaginationScraper {
     await this.page.waitForSelector('a[href*="JobPosting.aspx"]', { timeout: 10000 });
 
     const jobs = await this.page.evaluate(() => {
-      const jobElements = document.querySelectorAll('a[href*="JobPosting.aspx"]');
+      // Only get job links from the main results container to avoid duplicates
+      // Look for the main results table/list container
+      const mainContainer = document.querySelector('#cphMainContent_lvResults, #cphMainContent_gvResults, .job-results-container, [id*="Results"]') || document;
+      const jobElements = mainContainer.querySelectorAll('a[href*="JobPosting.aspx"]');
       const extractedJobs = [];
+      const seenJobIds = new Set(); // Track job IDs to prevent duplicates
 
       jobElements.forEach((linkEl) => {
         const href = linkEl.href;
@@ -165,6 +182,13 @@ class WindowedPaginationScraper {
         
         if (jobControlMatch) {
           const job_control = jobControlMatch[1];
+          
+          // Skip if we've already seen this job ID on this page
+          if (seenJobIds.has(job_control)) {
+            return;
+          }
+          seenJobIds.add(job_control);
+          
           const link_title = linkEl.textContent.trim() || '';
           
           let jobContainer = linkEl.closest('div, tr, section, td');
@@ -243,11 +267,14 @@ class WindowedPaginationScraper {
           insertedCount++;
           this.totalJobsScraped++;
           
-          if (insertedCount <= 3) { // Only log first 3 to reduce noise
-            console.log(`✅ NEW: ${job.job_control} - ${job.link_title}`);
-          }
+          // Log all insertions with publish date
+          console.log(`✅ NEW: ${job.job_control} - ${job.link_title} | Published: ${job.publish_date}`);
         } else if (result.reason === 'duplicate') {
           duplicates++;
+          // Log first few duplicates with publish date to verify sort order
+          if (duplicates <= 3) {
+            console.log(`⏭️  DUP: ${job.job_control} - ${job.link_title} | Published: ${job.publish_date}`);
+          }
         }
       } catch (error) {
         console.error(`❌ Error inserting job ${job.job_control}:`, error.message);
@@ -364,8 +391,11 @@ class WindowedPaginationScraper {
         this.processedPages.add(pageNum);
         pagesProcessedInWindow++;
 
-        // Respectful delay between pages
-        await this.page.waitForTimeout(2000);
+        // Progressive backoff - delay increases as we process more pages
+        const totalPagesProcessed = this.processedPages.size;
+        const pageDelay = 2000 + (totalPagesProcessed * 500); // Start at 2s, add 0.5s per page processed
+        console.log(`⏳ Waiting ${pageDelay/1000}s before continuing (progressive backoff)...`);
+        await this.page.waitForTimeout(pageDelay);
 
       } catch (error) {
         console.error(`❌ Error processing page ${pageNum}:`, error.message);
@@ -377,6 +407,13 @@ class WindowedPaginationScraper {
       pages: availablePages,
       processed: pagesProcessedInWindow
     });
+    
+    // Progressive window delay - longer breaks between windows
+    if (pagesProcessedInWindow > 0) {
+      const windowDelay = 5000 + (this.processedWindows.length * 3000); // Start at 5s, add 3s per window
+      console.log(`⏸️  Taking ${windowDelay/1000}s break before next window (progressive backoff)...`);
+      await this.page.waitForTimeout(windowDelay);
+    }
     
     return pagesProcessedInWindow > 0;
   }
