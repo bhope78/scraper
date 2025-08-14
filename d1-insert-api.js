@@ -59,9 +59,45 @@ class D1Insert {
     }
 
     /**
-     * Execute SQL query using Cloudflare API
+     * Sleep helper for rate limiting
      */
-    async executeSQL(sql) {
+    async sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Execute SQL query using Cloudflare API with retry logic
+     */
+    async executeSQL(sql, retries = 3) {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                // Add delay between attempts to avoid rate limiting
+                if (attempt > 1) {
+                    await this.sleep(1000 * attempt); // Exponential backoff: 1s, 2s, 3s
+                }
+                
+                const result = await this._executeSQLInternal(sql);
+                return result;
+            } catch (error) {
+                if (error.message.includes('Invalid non-JSON request') || 
+                    error.message.includes('400 Bad Request') ||
+                    error.message.includes('Failed to parse response')) {
+                    
+                    if (attempt === retries) {
+                        throw error; // Final attempt failed
+                    }
+                    console.log(`⏳ Rate limited, retrying in ${attempt}s... (attempt ${attempt}/${retries})`);
+                } else {
+                    throw error; // Non-retryable error
+                }
+            }
+        }
+    }
+
+    /**
+     * Internal SQL execution
+     */
+    async _executeSQLInternal(sql) {
         return new Promise((resolve, reject) => {
             const data = JSON.stringify({ sql });
             
@@ -93,7 +129,12 @@ class D1Insert {
                             reject(new Error(parsed.errors?.[0]?.message || 'Query failed'));
                         }
                     } catch (e) {
-                        reject(new Error(`Failed to parse response: ${responseData}`));
+                        // Check if it's an HTML error response (rate limiting)
+                        if (responseData.includes('<html>') && responseData.includes('400 Bad Request')) {
+                            reject(new Error('Invalid non-JSON request - rate limited'));
+                        } else {
+                            reject(new Error(`Failed to parse response: ${responseData}`));
+                        }
                     }
                 });
             });
@@ -126,6 +167,9 @@ class D1Insert {
      */
     async insertJob(job) {
         try {
+            // Small delay to avoid rate limiting (50ms between insertions)
+            await this.sleep(50);
+            
             // Check if job already exists
             if (await this.jobExists(job.job_control)) {
                 console.log(`⏭️  Job ${job.job_control} already exists, skipping`);
