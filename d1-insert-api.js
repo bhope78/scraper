@@ -153,8 +153,8 @@ class D1Insert {
      */
     async jobExists(jobControl) {
         try {
-            // Add small delay before checking to avoid rate limits
-            await this.sleep(100);
+            // Add delay before checking to match headed browser speed
+            await this.sleep(1000);
             const sql = `SELECT id FROM ${this.tableName} WHERE job_control = '${jobControl}' LIMIT 1`;
             const result = await this.executeSQL(sql);
             return result && result[0] && result[0].results && result[0].results.length > 0;
@@ -169,8 +169,8 @@ class D1Insert {
      */
     async insertJob(job) {
         try {
-            // Delay to avoid rate limiting (200ms between insertions)
-            await this.sleep(200);
+            // Delay to match headed browser speed (1.5s between insertions)
+            await this.sleep(1500);
             
             // Check if job already exists
             if (await this.jobExists(job.job_control)) {
