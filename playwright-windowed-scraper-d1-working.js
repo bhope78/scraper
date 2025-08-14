@@ -1,11 +1,8 @@
 const { chromium } = require('playwright');
 const { exec } = require('child_process');
 const util = require('util');
-
-// Use different modules based on environment
-const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
-const D1Insert = isGitHubActions ? require('./d1-insert') : require('./d1-insert-local');
-const D1Config = isGitHubActions ? require('./d1-config') : require('./d1-config-local');
+const D1Insert = require('./d1-insert-local');
+const D1Config = require('./d1-config-local');
 
 const execAsync = util.promisify(exec);
 
@@ -29,26 +26,14 @@ class WindowedPaginationScraper {
   async initializeD1() {
     console.log('☁️  Initializing D1 connection...');
     
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-    const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
-    
-    if (isGitHubActions) {
-      console.log('🤖 Running in GitHub Actions with API token');
-      if (!apiToken) {
-        throw new Error('CLOUDFLARE_API_TOKEN is required for GitHub Actions');
-      }
-      this.d1Config = new D1Config(apiToken);
-    } else {
-      console.log('🏠 Running locally with OAuth');
-      this.d1Config = new D1Config(null); // null = use OAuth
-    }
-    
+    // Load configuration from D1 using OAuth (for local runs)
+    this.d1Config = new D1Config(null); // null = use OAuth
     await this.d1Config.loadConfig();
     this.d1Config.validateConfig();
     
     // Initialize insert helper
     this.d1Insert = new D1Insert(
-      isGitHubActions ? apiToken : null,
+      null, // null = use OAuth
       this.d1Config.get('database_name'),
       this.d1Config.get('table_name')
     );
@@ -58,13 +43,10 @@ class WindowedPaginationScraper {
   }
 
   async initBrowser() {
-    const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
-    
-    console.log(`🌐 Launching browser in ${isGitHubActions ? 'HEADLESS' : 'VISIBLE'} mode...`);
-    
+    console.log('🌐 Launching browser...');
     this.browser = await chromium.launch({ 
-      headless: isGitHubActions,  // Headless in GitHub Actions, visible locally
-      slowMo: isGitHubActions ? 500 : 1200  // Faster in GitHub Actions
+      headless: false,
+      slowMo: 1200
     });
     
     this.page = await this.browser.newPage();
