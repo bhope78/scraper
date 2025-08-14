@@ -4,7 +4,7 @@ const util = require('util');
 
 // Use different modules based on environment
 const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
-const D1Insert = isGitHubActions ? require('./d1-insert') : require('./d1-insert-local');
+const D1Insert = isGitHubActions ? require('./d1-insert-api') : require('./d1-insert-local');
 const D1Config = isGitHubActions ? require('./d1-config') : require('./d1-config-local');
 
 const execAsync = util.promisify(exec);
