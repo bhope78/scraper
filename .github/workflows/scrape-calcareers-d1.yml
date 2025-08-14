@@ -38,6 +38,13 @@ jobs:
     - name: Install Playwright browsers
       run: npx playwright install chromium
     
+    - name: Setup D1 Configuration
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "🔧 Setting up D1 configuration table..."
+        node setup-config-github.js
+    
     - name: Test D1 Connection
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
