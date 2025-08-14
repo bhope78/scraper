@@ -28,21 +28,34 @@ class D1Insert {
      * Format date for SQL
      */
     formatDate(date) {
-        if (!date || date === 'Not specified') return 'NULL';
-        // If it's already a string in the right format, use it
-        if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            return `'${date}'`;
+        if (!date || date === 'Not specified') {
+            // For filing_date, use "Until Filled" as default
+            return `'Until Filled'`;
         }
-        // Try to parse and format the date
-        try {
-            const parsedDate = new Date(date);
-            if (!isNaN(parsedDate.getTime())) {
-                return `'${parsedDate.toISOString().split('T')[0]}'`;
+        
+        // Keep the original text if it's not a date (like "Until Filled", "Continuous", etc.)
+        if (typeof date === 'string') {
+            // Check if it's a date in YYYY-MM-DD format
+            if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                return `'${date}'`;
             }
-        } catch (e) {
-            console.error(`Date parsing error for: ${date}`);
+            // Check if it looks like a date that needs parsing (MM/DD/YYYY or similar)
+            if (date.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/)) {
+                try {
+                    const parsedDate = new Date(date);
+                    if (!isNaN(parsedDate.getTime())) {
+                        return `'${parsedDate.toISOString().split('T')[0]}'`;
+                    }
+                } catch (e) {
+                    // If parsing fails, keep the original text
+                }
+            }
+            // For any other text (Until Filled, Continuous, etc.), keep it as is
+            return `'${date.replace(/'/g, "''")}'`;
         }
-        return 'NULL';
+        
+        // Default to "Until Filled" if we can't determine what it is
+        return `'Until Filled'`;
     }
 
     /**
