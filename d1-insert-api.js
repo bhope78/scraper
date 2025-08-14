@@ -28,14 +28,14 @@ class D1Insert {
      * Format date for SQL
      */
     formatDate(date) {
-        if (!date || date === 'Not specified') {
-            // For filing_date, use "Until Filled" as default
-            return `'Until Filled'`;
+        // If no date provided or it's explicitly "Not specified", keep that text
+        if (!date) {
+            return `'Not specified'`;
         }
         
-        // Keep the original text if it's not a date (like "Until Filled", "Continuous", etc.)
+        // Keep the original text value, whatever it is
         if (typeof date === 'string') {
-            // Check if it's a date in YYYY-MM-DD format
+            // Check if it's already in YYYY-MM-DD format
             if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
                 return `'${date}'`;
             }
@@ -50,12 +50,12 @@ class D1Insert {
                     // If parsing fails, keep the original text
                 }
             }
-            // For any other text (Until Filled, Continuous, etc.), keep it as is
-            return `'${date.replace(/'/g, "''")}'`;
+            // For ANY text (Until Filled, Continuous, Not specified, etc.), keep it exactly as is
+            return `'${date.replace(/'/g, "''")}'`;  // Escape single quotes for SQL
         }
         
-        // Default to "Until Filled" if we can't determine what it is
-        return `'Until Filled'`;
+        // If it's not a string, try to convert it
+        return `'${String(date).replace(/'/g, "''")}'`;
     }
 
     /**
