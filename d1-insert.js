@@ -43,7 +43,7 @@ class D1Insert {
      */
     async jobExists(jobControl) {
         try {
-            const command = `CLOUDFLARE_API_TOKEN="${this.apiToken}" npx wrangler d1 execute ${this.dbName} --remote --command "SELECT id FROM ${this.tableName} WHERE job_control = '${jobControl}'" --json`;
+            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "SELECT id FROM ${this.tableName} WHERE job_control = '${jobControl}'" --json`;
             
             const { stdout } = await execAsync(command, {
                 env: { ...process.env, CLOUDFLARE_API_TOKEN: this.apiToken }
@@ -98,7 +98,7 @@ class D1Insert {
                 ${this.escapeSQL(job.duty_statement)}
             )`;
 
-            const command = `CLOUDFLARE_API_TOKEN="${this.apiToken}" npx wrangler d1 execute ${this.dbName} --remote --command "${sql.replace(/\n/g, ' ').replace(/\s+/g, ' ')}"`;
+            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "${sql.replace(/\n/g, ' ').replace(/\s+/g, ' ')}"`;
             
             await execAsync(command, {
                 env: { ...process.env, CLOUDFLARE_API_TOKEN: this.apiToken },
@@ -157,7 +157,7 @@ class D1Insert {
      */
     async getJobCount() {
         try {
-            const command = `CLOUDFLARE_API_TOKEN="${this.apiToken}" npx wrangler d1 execute ${this.dbName} --remote --command "SELECT COUNT(*) as count FROM ${this.tableName}" --json`;
+            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "SELECT COUNT(*) as count FROM ${this.tableName}" --json`;
             
             const { stdout } = await execAsync(command, {
                 env: { ...process.env, CLOUDFLARE_API_TOKEN: this.apiToken }
@@ -176,7 +176,7 @@ class D1Insert {
      */
     async getRecentJobs(limit = 5) {
         try {
-            const command = `CLOUDFLARE_API_TOKEN="${this.apiToken}" npx wrangler d1 execute ${this.dbName} --remote --command "SELECT job_control, working_title, department, created_at FROM ${this.tableName} ORDER BY created_at DESC LIMIT ${limit}" --json`;
+            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "SELECT job_control, working_title, department, created_at FROM ${this.tableName} ORDER BY created_at DESC LIMIT ${limit}" --json`;
             
             const { stdout } = await execAsync(command, {
                 env: { ...process.env, CLOUDFLARE_API_TOKEN: this.apiToken }
