@@ -43,7 +43,6 @@ jobs:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       run: |
         echo "🔍 Testing D1 connection..."
-        cd D1
         node test-d1-connection.js
     
     - name: Run CalCareers Scraper
@@ -54,7 +53,6 @@ jobs:
         DEBUG: ${{ github.event.inputs.debug_enabled == 'true' && 'true' || 'false' }}
       run: |
         echo "🚀 Starting CalCareers D1 scraper..."
-        cd D1
         node playwright-windowed-scraper-d1.js
     
     - name: Generate Summary Report
@@ -65,7 +63,6 @@ jobs:
         echo "📊 Generating summary report..."
         
         # Get job count from D1
-        cd D1
         COUNT=$(npx wrangler d1 execute Calhr \
           --remote \
           --command "SELECT COUNT(*) as count FROM ccJobs" \
@@ -93,7 +90,6 @@ jobs:
       with:
         name: scraper-logs-${{ github.run_id }}
         path: |
-          D1/*.log
           *.log
         retention-days: 30
     
