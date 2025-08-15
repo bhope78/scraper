@@ -43,9 +43,15 @@ class D1Insert {
      */
     async getExistingJob(jobControl) {
         try {
-            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "SELECT * FROM ${this.tableName} WHERE job_control = '${jobControl}'" --json`;
+            // If we have an API token, prepend it to the command
+            const prefix = this.apiToken ? `CLOUDFLARE_API_TOKEN="${this.apiToken}" ` : '';
+            const command = `${prefix}npx wrangler d1 execute ${this.dbName} --remote --command "SELECT * FROM ${this.tableName} WHERE job_control = '${jobControl}'" --json`;
             
-            const { stdout } = await execAsync(command);
+            const { stdout, stderr } = await execAsync(command);
+            
+            if (stderr && !stderr.includes('wrangler')) {
+                console.error(`⚠️ Wrangler stderr for job ${jobControl}:`, stderr);
+            }
             
             const result = JSON.parse(stdout);
             if (result[0].results.length > 0) {
@@ -54,6 +60,9 @@ class D1Insert {
             return null;
         } catch (error) {
             console.error(`❌ Error checking job ${jobControl}:`, error.message);
+            if (error.stderr) {
+                console.error(`   Stderr:`, error.stderr);
+            }
             return null;
         }
     }
@@ -109,7 +118,8 @@ class D1Insert {
                 working_title = ${this.escapeSQL(job.working_title)}
             WHERE id = ${jobId}`;
 
-            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "${sql.replace(/\n/g, ' ').replace(/\s+/g, ' ')}"`;
+            const prefix = this.apiToken ? `CLOUDFLARE_API_TOKEN="${this.apiToken}" ` : '';
+            const command = `${prefix}npx wrangler d1 execute ${this.dbName} --remote --command "${sql.replace(/\n/g, ' ').replace(/\s+/g, ' ')}"`;
             
             await execAsync(command, {
                 maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large commands
@@ -170,7 +180,8 @@ class D1Insert {
                 ${this.escapeSQL(job.working_title)}
             )`;
 
-            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "${sql.replace(/\n/g, ' ').replace(/\s+/g, ' ')}"`;
+            const prefix = this.apiToken ? `CLOUDFLARE_API_TOKEN="${this.apiToken}" ` : '';
+            const command = `${prefix}npx wrangler d1 execute ${this.dbName} --remote --command "${sql.replace(/\n/g, ' ').replace(/\s+/g, ' ')}"`;
             
             await execAsync(command, {
                 maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large commands
@@ -189,7 +200,8 @@ class D1Insert {
      */
     async getJobCount() {
         try {
-            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "SELECT COUNT(*) as count FROM ${this.tableName}" --json`;
+            const prefix = this.apiToken ? `CLOUDFLARE_API_TOKEN="${this.apiToken}" ` : '';
+            const command = `${prefix}npx wrangler d1 execute ${this.dbName} --remote --command "SELECT COUNT(*) as count FROM ${this.tableName}" --json`;
             
             const { stdout } = await execAsync(command);
             const result = JSON.parse(stdout);
@@ -200,6 +212,9 @@ class D1Insert {
             return 0;
         } catch (error) {
             console.error('❌ Error getting job count:', error.message);
+            if (error.stderr) {
+                console.error('   Stderr:', error.stderr);
+            }
             return 0;
         }
     }
