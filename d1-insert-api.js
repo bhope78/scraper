@@ -179,33 +179,29 @@ class D1Insert {
             }
 
             const sql = `INSERT INTO ${this.tableName} (
-                working_title, department, job_control, location, salary_range,
-                telework, worktype_schedule, publish_date, filing_date,
-                link_title, job_description_duties, position_num,
-                special_requirements, application_instructions, desirable_qual,
-                soq, contact_info, additional_instructions, equal_opportunity,
-                duty_statement
+                link_title,
+                job_control,
+                salary_range,
+                department,
+                location,
+                telework,
+                publish_date,
+                filing_deadline,
+                job_posting_url,
+                work_type_schedule,
+                working_title
             ) VALUES (
-                ${this.escapeSQL(job.working_title)},
-                ${this.escapeSQL(job.department)},
-                ${this.escapeSQL(job.job_control)},
-                ${this.escapeSQL(job.location)},
-                ${this.escapeSQL(job.salary_range)},
-                ${this.escapeSQL(job.telework)},
-                ${this.escapeSQL(job.worktype_schedule || job.work_type_schedule)},
-                ${this.formatDate(job.publish_date)},
-                ${this.formatDate(job.filing_date)},
                 ${this.escapeSQL(job.link_title)},
-                ${this.escapeSQL(job.job_description_duties)},
-                ${this.escapeSQL(job.position_num)},
-                ${this.escapeSQL(job.special_requirements)},
-                ${this.escapeSQL(job.application_instructions)},
-                ${this.escapeSQL(job.desirable_qual)},
-                ${this.escapeSQL(job.soq)},
-                ${this.escapeSQL(job.contact_info)},
-                ${this.escapeSQL(job.additional_instructions)},
-                ${this.escapeSQL(job.equal_opportunity)},
-                ${this.escapeSQL(job.duty_statement)}
+                ${this.escapeSQL(job.job_control)},
+                ${this.escapeSQL(job.salary_range)},
+                ${this.escapeSQL(job.department)},
+                ${this.escapeSQL(job.location)},
+                ${this.escapeSQL(job.telework)},
+                ${this.formatDate(job.publish_date)},
+                ${this.formatDate(job.filing_date || job.filing_deadline)},
+                ${this.escapeSQL(job.job_posting_url || `https://www.calcareers.ca.gov/CalHrPublic/Jobs/JobPosting.aspx?JobControlId=${job.job_control}`)},
+                ${this.escapeSQL(job.work_type_schedule || job.worktype_schedule)},
+                ${this.escapeSQL(job.working_title)}
             )`;
 
             await this.executeSQL(sql);

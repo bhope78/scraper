@@ -253,7 +253,7 @@ class WindowedPaginationScraper {
           location: job.location,
           salary_range: job.salary_range,
           telework: job.telework,
-          worktype_schedule: job.work_type_schedule,
+          work_type_schedule: job.work_type_schedule,
           publish_date: job.publish_date,
           filing_date: job.filing_deadline,
           link_title: job.link_title
