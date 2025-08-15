@@ -13,11 +13,26 @@ on:
         description: 'Run with debug logging'
         required: false
         default: false
+      force_scrape:
+        type: boolean
+        description: 'Force scrape even if health check fails'
+        required: false
+        default: false
+
+env:
+  # Global environment variables
+  NODE_ENV: production
+  GITHUB_ACTIONS: 'true'
 
 jobs:
-  scrape:
+  # Authentication and health check job
+  health-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 180  # 3 hour timeout for full scrape
+    timeout-minutes: 10
+    outputs:
+      auth-status: ${{ steps.health.outputs.status }}
+      auth-method: ${{ steps.health.outputs.method }}
+      database-count: ${{ steps.health.outputs.database-count }}
     
     steps:
     - name: Checkout code
@@ -26,76 +41,291 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '20.x'
         cache: 'npm'
     
     - name: Install dependencies
       run: |
         npm ci
-        # Install wrangler globally
-        npm install -g wrangler@latest
+        # Install wrangler globally with specific version for stability
+        npm install -g wrangler@3.78.12
+    
+    - name: Validate GitHub Secrets
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "🔍 Validating GitHub Secrets..."
+        
+        if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+          echo "❌ CLOUDFLARE_API_TOKEN secret is not set"
+          echo "💡 Please add CLOUDFLARE_API_TOKEN to GitHub repository secrets"
+          exit 1
+        fi
+        
+        echo "✅ CLOUDFLARE_API_TOKEN secret is present"
+        echo "🔍 Token length: ${#CLOUDFLARE_API_TOKEN} characters"
+        
+        # Validate token format
+        if [[ ! "$CLOUDFLARE_API_TOKEN" =~ ^[A-Za-z0-9_-]{40}$ ]]; then
+          echo "⚠️  Token format may be incorrect (expected 40 chars, alphanumeric + _ -)"
+        else
+          echo "✅ Token format looks correct"
+        fi
+
+    - name: Comprehensive Authentication Test
+      id: health
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "🔐 Running comprehensive authentication test..."
+        
+        # Run token validation
+        if node token-validator.js; then
+          echo "✅ Authentication test passed"
+          echo "status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Authentication test failed"
+          echo "status=unhealthy" >> $GITHUB_OUTPUT
+          
+          # Don't fail immediately - let the scrape job decide
+          echo "⚠️  Continuing despite health check failure (can be overridden)"
+        fi
+        
+        # Get additional diagnostics
+        node -e "
+          const AuthManager = require('./auth-manager');
+          const auth = new AuthManager();
+          auth.initialize().then(() => {
+            const diag = auth.getDiagnostics();
+            console.log('method=' + diag.authMethod);
+            console.log('environment=' + diag.environment);
+          }).catch(e => {
+            console.log('method=failed');
+            console.log('environment=unknown');
+          });
+        " | while read line; do
+          if [[ $line == method=* ]]; then
+            echo "${line}" >> $GITHUB_OUTPUT
+          fi
+        done
+
+    - name: Test D1 Database Access
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "🔍 Testing D1 database access..."
+        
+        # Use our enhanced test script
+        if node test-d1-connection.js; then
+          echo "✅ D1 connection test passed"
+        else
+          echo "❌ D1 connection test failed"
+          echo "🔍 Attempting direct wrangler test..."
+          
+          # Fallback test with direct wrangler command
+          npx wrangler d1 execute Calhr --remote --command "SELECT 1 as test" --json || {
+            echo "❌ Direct wrangler test also failed"
+            exit 1
+          }
+        fi
+
+  # Main scraping job
+  scrape:
+    needs: health-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    
+    # Only run if health check passed OR force_scrape is true
+    if: needs.health-check.outputs.auth-status == 'healthy' || github.event.inputs.force_scrape == 'true'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        npm ci
+        # Use same wrangler version as health check
+        npm install -g wrangler@3.78.12
     
     - name: Install Playwright browsers
       run: npx playwright install chromium
     
-    - name: Test D1 Connection
+    - name: Pre-flight Authentication Check
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       run: |
-        echo "🔍 Testing D1 connection..."
-        node test-d1-connection.js
+        echo "🔍 Pre-flight authentication check..."
+        echo "Health check status: ${{ needs.health-check.outputs.auth-status }}"
+        echo "Auth method: ${{ needs.health-check.outputs.auth-method }}"
+        
+        # Quick validation
+        node token-validator.js quick
     
     - name: Run CalCareers Scraper (Windowed Scraper)
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        GITHUB_ACTIONS: 'true'  # This tells the scraper to run in headless mode
-        NODE_ENV: production
         DEBUG: ${{ github.event.inputs.debug_enabled == 'true' && 'true' || 'false' }}
       run: |
         echo "🚀 Starting CalCareers D1 scraper (windowed scraper - proven to work)..."
+        echo "🔍 Environment: GitHub Actions"
+        echo "🔍 Debug mode: $DEBUG"
+        
+        # Use the enhanced auth manager for the scraper
         node playwright-windowed-scraper-d1.js
     
-    - name: Generate Summary Report
+    - name: Post-Scrape Validation
       if: always()
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       run: |
-        echo "📊 Generating summary report..."
+        echo "🔍 Running post-scrape validation..."
         
-        # Get job count from D1
+        # Quick health check after scraping
+        if node token-validator.js quick; then
+          echo "✅ Post-scrape authentication still healthy"
+        else
+          echo "⚠️  Post-scrape authentication issues detected"
+        fi
+    
+    - name: Generate Enhanced Summary Report
+      if: always()
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        echo "📊 Generating enhanced summary report..."
+        
+        # Use error handling for each command
+        echo "🔍 Getting job count..."
         COUNT=$(npx wrangler d1 execute Calhr \
           --remote \
           --command "SELECT COUNT(*) as count FROM ccJobs" \
-          --json 2>/dev/null | jq -r '.[0].results[0].count' || echo "Error getting count")
+          --json 2>/dev/null | jq -r '.[0].results[0].count' 2>/dev/null || echo "Error")
         
-        # Get recent jobs
+        echo "🔍 Getting recent jobs..."
         RECENT=$(npx wrangler d1 execute Calhr \
           --remote \
           --command "SELECT job_control, working_title FROM ccJobs ORDER BY id DESC LIMIT 5" \
-          --json 2>/dev/null | jq -r '.[0].results[] | "- \(.job_control): \(.working_title)"' || echo "Error getting recent jobs")
+          --json 2>/dev/null | jq -r '.[0].results[] | "- \(.job_control): \(.working_title)"' 2>/dev/null || echo "Error getting recent jobs")
         
-        # Create summary for GitHub Actions
+        echo "🔍 Getting today's additions..."
+        TODAY=$(date +%Y-%m-%d)
+        TODAY_COUNT=$(npx wrangler d1 execute Calhr \
+          --remote \
+          --command "SELECT COUNT(*) as count FROM ccJobs WHERE publish_date = '$TODAY'" \
+          --json 2>/dev/null | jq -r '.[0].results[0].count' 2>/dev/null || echo "Error")
+        
+        # Create enhanced summary for GitHub Actions
         echo "## 📊 CalCareers Scraper Run Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
         echo "**Run Date**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "**Health Check**: ${{ needs.health-check.outputs.auth-status }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Auth Method**: ${{ needs.health-check.outputs.auth-method }}" >> $GITHUB_STEP_SUMMARY
         echo "**Total Jobs in Database**: $COUNT" >> $GITHUB_STEP_SUMMARY
+        echo "**Jobs Added Today**: $TODAY_COUNT" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Recent Jobs Added:" >> $GITHUB_STEP_SUMMARY
         echo "$RECENT" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Technical Details:" >> $GITHUB_STEP_SUMMARY
+        echo "- Node Version: $(node --version)" >> $GITHUB_STEP_SUMMARY
+        echo "- Wrangler Version: $(npx wrangler --version 2>/dev/null || echo 'Error')" >> $GITHUB_STEP_SUMMARY
+        echo "- Run ID: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Workflow: ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
     
-    - name: Upload logs
+    - name: Upload comprehensive logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: scraper-logs-${{ github.run_id }}
         path: |
           *.log
+          *.json
+          playwright-report/
         retention-days: 30
+        if-no-files-found: warn
     
-    - name: Notify on failure
+    - name: Enhanced Failure Notification
       if: failure()
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       run: |
-        echo "❌ Scraper failed! Check the logs for details."
-        # You can add additional notification logic here
-        # For example, sending a webhook to Slack or Discord
+        echo "❌ Scraper failed! Generating failure report..."
+        
+        # Create failure report
+        echo "## ❌ Scraper Failure Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Failure Time**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "**Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Health Check Status**: ${{ needs.health-check.outputs.auth-status }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Troubleshooting Steps:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Check the authentication logs in the health-check job" >> $GITHUB_STEP_SUMMARY
+        echo "2. Verify CLOUDFLARE_API_TOKEN secret is correctly set" >> $GITHUB_STEP_SUMMARY
+        echo "3. Review uploaded artifacts for detailed logs" >> $GITHUB_STEP_SUMMARY
+        echo "4. Try running with 'force_scrape' option if health check failed" >> $GITHUB_STEP_SUMMARY
+        
+        # Attempt to get system status
+        echo "🔍 Checking system status..."
+        node token-validator.js quick || echo "⚠️  Token validation failed in failure handler"
+
+  # Monitoring and alerting job
+  monitoring:
+    needs: [health-check, scrape]
+    runs-on: ubuntu-latest
+    if: always()
+    timeout-minutes: 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Generate Monitoring Report
+      env:
+        HEALTH_STATUS: ${{ needs.health-check.outputs.auth-status }}
+        SCRAPE_STATUS: ${{ needs.scrape.result }}
+        AUTH_METHOD: ${{ needs.health-check.outputs.auth-method }}
+      run: |
+        echo "📊 Generating monitoring report..."
+        
+        # Create monitoring summary
+        cat << EOF > monitoring-report.json
+        {
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "workflow_run_id": "${{ github.run_id }}",
+          "workflow_run_number": "${{ github.run_number }}",
+          "health_check_status": "$HEALTH_STATUS",
+          "scrape_job_status": "$SCRAPE_STATUS",
+          "auth_method": "$AUTH_METHOD",
+          "trigger": "${{ github.event_name }}",
+          "repository": "${{ github.repository }}",
+          "branch": "${{ github.ref_name }}",
+          "commit": "${{ github.sha }}"
+        }
+        EOF
+        
+        echo "📋 Monitoring Report:"
+        cat monitoring-report.json | jq .
+    
+    - name: Upload monitoring report
+      uses: actions/upload-artifact@v4
+      with:
+        name: monitoring-report-${{ github.run_id }}
+        path: monitoring-report.json
+        retention-days: 90

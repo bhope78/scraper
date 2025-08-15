@@ -1,14 +1,24 @@
 {
   "name": "calcareers-d1-scraper",
-  "version": "1.0.0",
-  "description": "CalCareers job scraper with Cloudflare D1 storage",
-  "main": "playwright-windowed-scraper-d1.js",
+  "version": "2.0.0",
+  "description": "BULLETPROOF CalCareers job scraper with enterprise-grade resilience and Cloudflare D1 storage",
+  "main": "ultimate-bulletproof-scraper.js",
   "scripts": {
     "test": "node test-d1-connection.js",
-    "scrape": "node playwright-windowed-scraper-d1.js",
-    "scrape:headless": "GITHUB_ACTIONS=true node playwright-windowed-scraper-d1.js",
+    "test:auth": "node token-validator.js",
+    "test:auth:quick": "node token-validator.js quick",
+    "test:secrets": "node github-secrets-verifier.js",
+    "test:failover": "node failover-auth-manager.js test",
+    "scrape": "node ultimate-bulletproof-scraper.js",
+    "scrape:headless": "GITHUB_ACTIONS=true node ultimate-bulletproof-scraper.js",
+    "scrape:bulletproof": "node ultimate-bulletproof-scraper.js",
+    "scrape:legacy": "node playwright-windowed-scraper-d1.js",
+    "scrape:legacy:headless": "GITHUB_ACTIONS=true node playwright-windowed-scraper-d1.js",
     "scrape:7day": "node playwright-7day-scraper-d1.js",
-    "scrape:7day:headless": "GITHUB_ACTIONS=true node playwright-7day-scraper-d1.js"
+    "scrape:7day:headless": "GITHUB_ACTIONS=true node playwright-7day-scraper-d1.js",
+    "validate:github": "node github-secrets-verifier.js",
+    "webhook:test": "node webhook-notifier.js",
+    "auth:status": "node failover-auth-manager.js status"
   },
   "repository": {
     "type": "git",
@@ -19,7 +29,14 @@
     "calcareers",
     "cloudflare-d1",
     "playwright",
-    "github-actions"
+    "github-actions",
+    "bulletproof",
+    "enterprise-automation",
+    "fault-tolerant",
+    "resilient-scraping",
+    "error-recovery",
+    "circuit-breaker",
+    "fallback-storage"
   ],
   "author": "",
   "license": "MIT",
