@@ -26,13 +26,13 @@ class SevenDayRollingScraper {
     this.cutoffDate = null;
     this.currentDate = null;
     
-    // TESTING LIMIT - Remove or increase for production
-    this.maxRecordsToProcess = 5;
+    // TESTING LIMIT - Disabled for production
+    this.maxRecordsToProcess = 999999; // Effectively unlimited
     this.recordsProcessed = 0;
     
     console.log('🚀 Seven-Day Rolling Window Scraper for D1');
     console.log(`📅 Will scrape jobs from the last ${this.targetDays} days`);
-    console.log(`🧪 TEST MODE: Limited to ${this.maxRecordsToProcess} records`);
+    console.log(`✅ Production mode: No record limit`);
   }
 
   /**

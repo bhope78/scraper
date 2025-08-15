@@ -172,13 +172,14 @@ jobs:
         # Quick validation
         node token-validator.js quick || echo "⚠️ Validation warning, continuing..."
     
-    - name: Run CalCareers Scraper (Windowed Scraper)
+    - name: Run CalCareers Scraper (7-Day Rolling Window)
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         CLOUDFLARE_ACCOUNT_ID: 'aa3156a55993be3bb2b637b7619ddc23'
         DEBUG: ${{ github.event.inputs.debug_enabled == 'true' && 'true' || 'false' }}
       run: |
-        echo "🚀 Starting CalCareers D1 scraper (windowed scraper - proven to work)..."
+        echo "🚀 Starting CalCareers D1 scraper (7-day rolling window)..."
+        echo "📅 Will only process jobs from the last 7 days"
         echo "🔍 Environment: GitHub Actions"
         echo "🔍 Debug mode: $DEBUG"
         echo "🔍 Account ID: $CLOUDFLARE_ACCOUNT_ID"
@@ -186,8 +187,8 @@ jobs:
         # Export account ID for wrangler
         export CLOUDFLARE_ACCOUNT_ID="aa3156a55993be3bb2b637b7619ddc23"
         
-        # Use the enhanced auth manager for the scraper
-        node playwright-windowed-scraper-d1.js
+        # Use the 7-day scraper for efficiency
+        node playwright-7day-scraper-d1.js
     
     - name: Post-Scrape Validation
       if: always()
