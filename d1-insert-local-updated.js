@@ -43,11 +43,12 @@ class D1Insert {
      */
     async getExistingJob(jobControl) {
         try {
-            // If we have an API token, prepend it to the command
-            const prefix = this.apiToken ? `CLOUDFLARE_API_TOKEN="${this.apiToken}" ` : '';
-            const command = `${prefix}npx wrangler d1 execute ${this.dbName} --remote --command "SELECT * FROM ${this.tableName} WHERE job_control = '${jobControl}'" --json`;
+            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "SELECT * FROM ${this.tableName} WHERE job_control = '${jobControl}'" --json`;
             
-            const { stdout, stderr } = await execAsync(command);
+            // Pass token via environment variable, not in command string
+            const env = this.apiToken ? { ...process.env, CLOUDFLARE_API_TOKEN: this.apiToken } : process.env;
+            
+            const { stdout, stderr } = await execAsync(command, { env });
             
             if (stderr && !stderr.includes('wrangler')) {
                 console.error(`⚠️ Wrangler stderr for job ${jobControl}:`, stderr);
@@ -118,10 +119,12 @@ class D1Insert {
                 working_title = ${this.escapeSQL(job.working_title)}
             WHERE id = ${jobId}`;
 
-            const prefix = this.apiToken ? `CLOUDFLARE_API_TOKEN="${this.apiToken}" ` : '';
-            const command = `${prefix}npx wrangler d1 execute ${this.dbName} --remote --command "${sql.replace(/\n/g, ' ').replace(/\s+/g, ' ')}"`;
+            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "${sql.replace(/\n/g, ' ').replace(/\s+/g, ' ')}"`;
+            
+            const env = this.apiToken ? { ...process.env, CLOUDFLARE_API_TOKEN: this.apiToken } : process.env;
             
             await execAsync(command, {
+                env,
                 maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large commands
             });
             
@@ -180,10 +183,12 @@ class D1Insert {
                 ${this.escapeSQL(job.working_title)}
             )`;
 
-            const prefix = this.apiToken ? `CLOUDFLARE_API_TOKEN="${this.apiToken}" ` : '';
-            const command = `${prefix}npx wrangler d1 execute ${this.dbName} --remote --command "${sql.replace(/\n/g, ' ').replace(/\s+/g, ' ')}"`;
+            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "${sql.replace(/\n/g, ' ').replace(/\s+/g, ' ')}"`;
+            
+            const env = this.apiToken ? { ...process.env, CLOUDFLARE_API_TOKEN: this.apiToken } : process.env;
             
             await execAsync(command, {
+                env,
                 maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large commands
             });
             
@@ -200,20 +205,47 @@ class D1Insert {
      */
     async getJobCount() {
         try {
-            const prefix = this.apiToken ? `CLOUDFLARE_API_TOKEN="${this.apiToken}" ` : '';
-            const command = `${prefix}npx wrangler d1 execute ${this.dbName} --remote --command "SELECT COUNT(*) as count FROM ${this.tableName}" --json`;
+            // Debug: Check API token
+            console.log(`🔍 Debug: API token present: ${this.apiToken ? 'Yes' : 'No'}`);
+            console.log(`🔍 Debug: API token length: ${this.apiToken ? this.apiToken.length : 0}`);
             
-            const { stdout } = await execAsync(command);
+            const command = `npx wrangler d1 execute ${this.dbName} --remote --command "SELECT COUNT(*) as count FROM ${this.tableName}" --json`;
+            
+            console.log(`🔍 Debug: Executing count query for table ${this.tableName} in database ${this.dbName}`);
+            
+            const env = this.apiToken ? { ...process.env, CLOUDFLARE_API_TOKEN: this.apiToken } : process.env;
+            
+            const { stdout, stderr } = await execAsync(command, { env });
+            
+            if (stderr) {
+                console.log('🔍 Debug stderr:', stderr);
+            }
+            
+            console.log('🔍 Debug stdout:', stdout);
             const result = JSON.parse(stdout);
             
             if (result[0].results.length > 0) {
-                return result[0].results[0].count;
+                const count = result[0].results[0].count;
+                console.log(`🔍 Debug: Found ${count} jobs in database`);
+                return count;
             }
             return 0;
         } catch (error) {
             console.error('❌ Error getting job count:', error.message);
             if (error.stderr) {
                 console.error('   Stderr:', error.stderr);
+            }
+            if (error.stdout) {
+                console.error('   Stdout:', error.stdout);
+            }
+            // Try to parse any JSON error response
+            try {
+                if (error.stdout) {
+                    const parsed = JSON.parse(error.stdout);
+                    console.error('   Parsed error:', JSON.stringify(parsed, null, 2));
+                }
+            } catch (e) {
+                // Not JSON, ignore
             }
             return 0;
         }
