@@ -45,15 +45,15 @@ jobs:
         echo "🔍 Testing D1 connection..."
         node test-d1-connection.js
     
-    - name: Run CalCareers Scraper (7-Day Rolling Window)
+    - name: Run CalCareers Scraper (Windowed Scraper)
       env:
         CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         GITHUB_ACTIONS: 'true'  # This tells the scraper to run in headless mode
         NODE_ENV: production
         DEBUG: ${{ github.event.inputs.debug_enabled == 'true' && 'true' || 'false' }}
       run: |
-        echo "🚀 Starting CalCareers D1 scraper (7-day rolling window with 5-record test limit)..."
-        node playwright-7day-scraper-d1.js
+        echo "🚀 Starting CalCareers D1 scraper (windowed scraper - proven to work)..."
+        node playwright-windowed-scraper-d1.js
     
     - name: Generate Summary Report
       if: always()
