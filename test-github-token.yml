@@ -1,0 +1,40 @@
+name: Test Cloudflare Token
+on: 
+  workflow_dispatch:
+
+jobs:
+  test-token:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Token Exists
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          echo "🔍 Testing Cloudflare API Token from GitHub Secrets"
+          echo "=================================================="
+          
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "❌ Token not found in GitHub Secrets!"
+            exit 1
+          fi
+          
+          echo "✅ Token found in GitHub Secrets"
+          echo "   Length: ${#CLOUDFLARE_API_TOKEN} characters"
+          echo "   Starts with underscore: $([ "${CLOUDFLARE_API_TOKEN:0:1}" = "_" ] && echo "YES ✅" || echo "NO ❌")"
+          
+          # Test with Cloudflare API
+          echo ""
+          echo "Testing token validity..."
+          response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+               -H "Content-Type: application/json")
+          
+          success=$(echo $response | jq -r '.success')
+          if [ "$success" = "true" ]; then
+            echo "✅ Token is VALID and working!"
+            echo $response | jq '.'
+          else
+            echo "❌ Token is INVALID or expired!"
+            echo $response | jq '.'
+            exit 1
+          fi
