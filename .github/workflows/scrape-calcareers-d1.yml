@@ -1,9 +1,12 @@
 name: CalCareers D1 Scraper
 
 on:
-  # Schedule to run daily at 2 AM UTC (6 PM PST / 7 PM PDT)
+  # Schedule to run on even days at 6 PM Pacific Time
+  # 6 PM PST = 2 AM UTC (next day)
+  # 6 PM PDT = 1 AM UTC (next day)
   schedule:
-    - cron: '0 2 * * *'
+    # Run at 1 AM UTC (6 PM PDT) on days 2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+    - cron: '0 1 2,4,6,8,10,12,14,16,18,20,22,24,26,28,30 * *'
   
   # Allow manual trigger
   workflow_dispatch:
