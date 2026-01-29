@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  cc_scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cc_scraper
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - GITHUB_ACTIONS=true
+      - NODE_ENV=production
+    restart: "no"
+    # For scheduled runs, use cron on the host or a scheduler container
+    # Example: docker compose run --rm cc_scraper

@@ -19,7 +19,7 @@ async function fixWranglerAuth() {
     console.log('✅ Token found, length:', token.length);
     
     // Set the account ID explicitly
-    const accountId = 'aa3156a55993be3bb2b637b7619ddc23';
+    const accountId = 'a2d15074d39d49779729f74c83fc8189';
     
     try {
         // Test with explicit account ID
@@ -56,7 +56,7 @@ compatibility_date = "2024-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "Calhr"
-database_id = "fcde85de-7c22-46a5-8eaf-f68a7aa0c1b9"
+database_id = "f9fe4ade-a55b-4600-bf24-64172903c2c6"
 `;
             
             fs.writeFileSync('wrangler.toml', wranglerConfig);

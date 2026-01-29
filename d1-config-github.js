@@ -10,8 +10,8 @@ class D1Config {
         this.apiToken = apiToken;
         // Hardcode configuration for GitHub Actions
         this.config = {
-            account_id: 'aa3156a55993be3bb2b637b7619ddc23',
-            database_id: 'fcde85de-7c22-46a5-8eaf-f68a7aa0c1b9',
+            account_id: 'a2d15074d39d49779729f74c83fc8189',
+            database_id: 'f9fe4ade-a55b-4600-bf24-64172903c2c6',
             database_name: 'Calhr',
             table_name: 'ccJobs',
             max_jobs_per_page: '100',

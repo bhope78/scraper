@@ -52,8 +52,8 @@ async function setupConfigTable() {
         console.log('📝 Inserting configuration values...');
         
         const configs = [
-            { key: 'account_id', value: 'aa3156a55993be3bb2b637b7619ddc23', description: 'Cloudflare Account ID' },
-            { key: 'database_id', value: 'fcde85de-7c22-46a5-8eaf-f68a7aa0c1b9', description: 'D1 Database ID' },
+            { key: 'account_id', value: 'a2d15074d39d49779729f74c83fc8189', description: 'Cloudflare Account ID' },
+            { key: 'database_id', value: 'f9fe4ade-a55b-4600-bf24-64172903c2c6', description: 'D1 Database ID' },
             { key: 'database_name', value: 'Calhr', description: 'D1 Database Name' },
             { key: 'table_name', value: 'ccJobs', description: 'Jobs Table Name' },
             { key: 'max_jobs_per_page', value: '100', description: 'Maximum jobs to display per page' },

@@ -156,7 +156,7 @@ class D1Diagnostic {
         console.log('💾 Database Configuration Check');
         console.log('-' .repeat(30));
 
-        const dbId = 'fcde85de-7c22-46a5-8eaf-f68a7aa0c1b9';
+        const dbId = 'f9fe4ade-a55b-4600-bf24-64172903c2c6';
         const dbName = 'Calhr';
         const tableName = 'ccJobs';
 

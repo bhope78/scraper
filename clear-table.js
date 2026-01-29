@@ -8,8 +8,8 @@ const https = require('https');
 
 async function clearTable() {
     const apiToken = process.env.CLOUDFLARE_API_TOKEN || '7myBlz54TNx-nwoc9AYJriIgQ9HACnAlIBuSSsp2';
-    const accountId = 'aa3156a55993be3bb2b637b7619ddc23';
-    const databaseId = 'fcde85de-7c22-46a5-8eaf-f68a7aa0c1b9';
+    const accountId = 'a2d15074d39d49779729f74c83fc8189';
+    const databaseId = 'f9fe4ade-a55b-4600-bf24-64172903c2c6';
     
     console.log('🗑️  Clearing ccJobs table...\n');
     

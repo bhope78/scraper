@@ -15,8 +15,8 @@ class D1ConnectionManager {
             apiToken: options.apiToken || process.env.CLOUDFLARE_API_TOKEN,
             databaseName: options.databaseName || 'Calhr',
             tableName: options.tableName || 'ccJobs',
-            accountId: options.accountId || 'aa3156a55993be3bb2b637b7619ddc23',
-            databaseId: options.databaseId || 'fcde85de-7c22-46a5-8eaf-f68a7aa0c1b9',
+            accountId: options.accountId || 'a2d15074d39d49779729f74c83fc8189',
+            databaseId: options.databaseId || 'f9fe4ade-a55b-4600-bf24-64172903c2c6',
             
             // Retry configuration
             maxRetries: options.maxRetries || 3,

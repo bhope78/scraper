@@ -12,8 +12,8 @@ class D1Insert {
         this.apiToken = apiToken;
         this.dbName = dbName;
         this.tableName = tableName;
-        this.accountId = 'aa3156a55993be3bb2b637b7619ddc23';
-        this.databaseId = 'fcde85de-7c22-46a5-8eaf-f68a7aa0c1b9';
+        this.accountId = 'a2d15074d39d49779729f74c83fc8189';
+        this.databaseId = 'f9fe4ade-a55b-4600-bf24-64172903c2c6';
     }
 
     /**

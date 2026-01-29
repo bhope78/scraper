@@ -313,7 +313,7 @@ npx wrangler d1 execute Calhr --remote --command "SELECT 1" --json || echo "❌ 
 
 ## 📞 Support Information
 
-- **Database ID**: fcde85de-7c22-46a5-8eaf-f68a7aa0c1b9
+- **Database ID**: f9fe4ade-a55b-4600-bf24-64172903c2c6
 - **Database Name**: Calhr  
 - **Table Name**: ccJobs
 - **Expected Record Count**: 3476+ (based on local data)

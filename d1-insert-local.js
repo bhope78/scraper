@@ -26,16 +26,50 @@ class D1Insert {
     }
 
     /**
-     * Format date for SQL
+     * Format date for SQL - handles various date formats gracefully
      */
     formatDate(date) {
         if (!date) return 'NULL';
-        // If it's already a string in the right format, use it
+
+        // If it's already a string in YYYY-MM-DD format, use it
         if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
             return `'${date}'`;
         }
-        // Otherwise convert to ISO date
-        return `'${new Date(date).toISOString().split('T')[0]}'`;
+
+        // Handle common text values (Until Filled, Continuous, etc.)
+        if (typeof date === 'string') {
+            const lowerDate = date.toLowerCase().trim();
+            if (lowerDate === 'until filled' || lowerDate === 'continuous' ||
+                lowerDate === 'open' || lowerDate === 'ongoing' ||
+                lowerDate.includes('until') || lowerDate.includes('continuous')) {
+                return `'${date.replace(/'/g, "''")}'`;
+            }
+
+            // Try to parse MM/DD/YYYY or similar formats
+            try {
+                const parsed = new Date(date);
+                if (!isNaN(parsed.getTime())) {
+                    return `'${parsed.toISOString().split('T')[0]}'`;
+                }
+            } catch (e) {
+                // If parsing fails, store as-is
+            }
+
+            // Store as-is if we can't parse it
+            return `'${date.replace(/'/g, "''")}'`;
+        }
+
+        // Try to convert to ISO date
+        try {
+            const parsed = new Date(date);
+            if (!isNaN(parsed.getTime())) {
+                return `'${parsed.toISOString().split('T')[0]}'`;
+            }
+        } catch (e) {
+            // Fall through to NULL
+        }
+
+        return 'NULL';
     }
 
     /**
@@ -56,15 +90,47 @@ class D1Insert {
     }
 
     /**
-     * Insert a single job
+     * Insert a single job with detailed logging
      */
     async insertJob(job) {
+        const jobId = job.job_control || 'UNKNOWN';
+
         try {
+            // Validate required field
+            if (!job.job_control) {
+                console.error(`❌ [${jobId}] Missing required field: job_control`);
+                return { success: false, reason: 'missing job_control' };
+            }
+
             // Check if job already exists
             if (await this.jobExists(job.job_control)) {
-                console.log(`⏭️  Job ${job.job_control} already exists, skipping`);
+                console.log(`⏭️  [${jobId}] Already exists, skipping`);
                 return { success: false, reason: 'duplicate' };
             }
+
+            // Build SQL with safe values
+            const values = {
+                working_title: this.escapeSQL(job.working_title),
+                department: this.escapeSQL(job.department),
+                job_control: this.escapeSQL(job.job_control),
+                location: this.escapeSQL(job.location),
+                salary_range: this.escapeSQL(job.salary_range),
+                telework: this.escapeSQL(job.telework),
+                worktype_schedule: this.escapeSQL(job.worktype_schedule || job.work_type_schedule),
+                publish_date: this.formatDate(job.publish_date),
+                filing_date: this.formatDate(job.filing_date || job.filing_deadline),
+                link_title: this.escapeSQL(job.link_title),
+                job_description_duties: this.escapeSQL(job.job_description_duties),
+                position_num: this.escapeSQL(job.position_num),
+                special_requirements: this.escapeSQL(job.special_requirements),
+                application_instructions: this.escapeSQL(job.application_instructions),
+                desirable_qual: this.escapeSQL(job.desirable_qual),
+                soq: this.escapeSQL(job.soq),
+                contact_info: this.escapeSQL(job.contact_info),
+                additional_instructions: this.escapeSQL(job.additional_instructions),
+                equal_opportunity: this.escapeSQL(job.equal_opportunity),
+                duty_statement: this.escapeSQL(job.duty_statement)
+            };
 
             const sql = `INSERT INTO ${this.tableName} (
                 working_title, department, job_control, location, salary_range,
@@ -74,39 +140,52 @@ class D1Insert {
                 soq, contact_info, additional_instructions, equal_opportunity,
                 duty_statement
             ) VALUES (
-                ${this.escapeSQL(job.working_title)},
-                ${this.escapeSQL(job.department)},
-                ${this.escapeSQL(job.job_control)},
-                ${this.escapeSQL(job.location)},
-                ${this.escapeSQL(job.salary_range)},
-                ${this.escapeSQL(job.telework)},
-                ${this.escapeSQL(job.worktype_schedule)},
-                ${this.formatDate(job.publish_date)},
-                ${this.formatDate(job.filing_date)},
-                ${this.escapeSQL(job.link_title)},
-                ${this.escapeSQL(job.job_description_duties)},
-                ${this.escapeSQL(job.position_num)},
-                ${this.escapeSQL(job.special_requirements)},
-                ${this.escapeSQL(job.application_instructions)},
-                ${this.escapeSQL(job.desirable_qual)},
-                ${this.escapeSQL(job.soq)},
-                ${this.escapeSQL(job.contact_info)},
-                ${this.escapeSQL(job.additional_instructions)},
-                ${this.escapeSQL(job.equal_opportunity)},
-                ${this.escapeSQL(job.duty_statement)}
+                ${values.working_title},
+                ${values.department},
+                ${values.job_control},
+                ${values.location},
+                ${values.salary_range},
+                ${values.telework},
+                ${values.worktype_schedule},
+                ${values.publish_date},
+                ${values.filing_date},
+                ${values.link_title},
+                ${values.job_description_duties},
+                ${values.position_num},
+                ${values.special_requirements},
+                ${values.application_instructions},
+                ${values.desirable_qual},
+                ${values.soq},
+                ${values.contact_info},
+                ${values.additional_instructions},
+                ${values.equal_opportunity},
+                ${values.duty_statement}
             )`;
 
             const command = `npx wrangler d1 execute ${this.dbName} --remote --command "${sql.replace(/\n/g, ' ').replace(/\s+/g, ' ')}"`;
-            
+
             await execAsync(command, {
                 maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large commands
             });
-            
-            console.log(`✅ Inserted job: ${job.job_control} - ${job.working_title}`);
+
+            console.log(`✅ [${jobId}] Inserted: ${job.working_title || 'N/A'} @ ${job.department || 'N/A'}`);
             return { success: true };
         } catch (error) {
-            console.error(`❌ Failed to insert job ${job.job_control}:`, error.message);
-            return { success: false, reason: error.message };
+            // Extract the actual error message from wrangler output
+            let errorMsg = error.message;
+            if (error.stdout && error.stdout.includes('"text"')) {
+                try {
+                    const parsed = JSON.parse(error.stdout);
+                    errorMsg = parsed.error?.notes?.[0]?.text || errorMsg;
+                } catch (e) {}
+            }
+
+            console.error(`❌ [${jobId}] Insert failed: ${errorMsg}`);
+            console.error(`   📋 Title: ${job.working_title || 'N/A'}`);
+            console.error(`   🏢 Dept: ${job.department || 'N/A'}`);
+            console.error(`   📅 Dates: pub=${job.publish_date}, file=${job.filing_date || job.filing_deadline}`);
+
+            return { success: false, reason: errorMsg };
         }
     }
 

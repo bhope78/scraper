@@ -23,7 +23,7 @@
 
 4. **Account Resources**
    - Include → Select your account: `Bryan@bhdev.co's Account`
-   - Account ID should be: `aa3156a55993be3bb2b637b7619ddc23`
+   - Account ID should be: `a2d15074d39d49779729f74c83fc8189`
 
 5. **IP Filtering (Optional)**
    - Leave blank for GitHub Actions
@@ -72,7 +72,7 @@ CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" npx wrangler d1 list
 # ┌──────────────────────────────────────┬───────┬─────────────────────┐
 # │ uuid                                 │ name  │ created_at          │
 # ├──────────────────────────────────────┼───────┼─────────────────────┤
-# │ fcde85de-7c22-46a5-8eaf-f68a7aa0c1b9 │ Calhr │ 2025-08-14T16:48:47 │
+# │ f9fe4ade-a55b-4600-bf24-64172903c2c6 │ Calhr │ 2025-08-14T16:48:47 │
 # └──────────────────────────────────────┴───────┴─────────────────────┘
 ```
 
