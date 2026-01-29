@@ -186,9 +186,9 @@ class D1Insert {
                 location,
                 telework,
                 publish_date,
-                filing_deadline,
+                filing_date,
                 job_posting_url,
-                work_type_schedule,
+                worktype_schedule,
                 working_title
             ) VALUES (
                 ${this.escapeSQL(job.link_title)},
@@ -200,7 +200,7 @@ class D1Insert {
                 ${this.formatDate(job.publish_date)},
                 ${this.formatDate(job.filing_date || job.filing_deadline)},
                 ${this.escapeSQL(job.job_posting_url || `https://www.calcareers.ca.gov/CalHrPublic/Jobs/JobPosting.aspx?JobControlId=${job.job_control}`)},
-                ${this.escapeSQL(job.work_type_schedule || job.worktype_schedule)},
+                ${this.escapeSQL(job.worktype_schedule || job.work_type_schedule)},
                 ${this.escapeSQL(job.working_title)}
             )`;
 
